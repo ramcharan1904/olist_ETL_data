@@ -1,0 +1,59 @@
+SELECT
+    TOP 100 *
+FROM
+    OPENROWSET(
+        BULK 'https://synapseolistdefault.dfs.core.windows.net/synapseolistfs/customers.csv',
+        FORMAT = 'CSV',
+        PARSER_VERSION = '2.0'
+    ) AS [result]
+
+SELECT
+     *
+FROM
+    OPENROWSET(
+        BULK 'https://ecomstorageacntrc.dfs.core.windows.net/olistdata/silver/',
+        FORMAT = 'PARQUET'
+    ) AS result1
+
+
+create schema gold
+
+create view gold.final 
+as 
+SELECT
+     *
+FROM
+    OPENROWSET(
+        BULK 'https://ecomstorageacntrc.dfs.core.windows.net/olistdata/silver/',
+        FORMAT = 'PARQUET'
+    ) AS result1
+
+select * from gold.final
+
+--CREATE MASTER KEY ENCRYPTION BY PASSWORD = 'd8TySvmWr4rPBUk';
+
+--CREATE DATABASE SCOPED CREDENTIAL ramadmin WITH IDENTITY = 'Managed Identity';
+
+--select * from sys.database_credentials
+
+CREATE EXTERNAL FILE FORMAT extfileformat WITH (
+    FORMAT_TYPE = PARQUET,
+    DATA_COMPRESSION = 'org.apache.hadoop.io.compress.SnappyCodec'
+);
+CREATE EXTERNAL DATA SOURCE goldlayer WITH (
+    LOCATION = 'https://ecomstorageacntrc.dfs.core.windows.net/olistdata/gold/',
+    CREDENTIAL = ramadmin
+);
+
+
+select * from gold.finaltable
+
+CREATE EXTERNAL TABLE gold.finaltable WITH (
+        LOCATION = 'Serving',
+        DATA_SOURCE = goldlayer,
+        FILE_FORMAT = extfileformat
+) AS
+SELECT * FROM gold.final;
+
+
+
